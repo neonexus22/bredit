@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       },
     });
 
-    return NextResponse.json({ name: subreddit.name });
+    return NextResponse.json(subreddit.name);
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return new NextResponse(error.message, { status: 422 });
