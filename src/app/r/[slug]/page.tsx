@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getAuthSession } from "@/lib/auth";
 import { INFINITE_SCROLLING_PAGINATION_RESULTS } from "@/config";
 import MiniCreatePost from "@/components/MiniCreatePost";
+import PostFeed from "@/components/PostFeed";
 
 interface IParams {
   slug: string;
@@ -40,6 +41,7 @@ const Community = async ({ params }: { params: IParams }) => {
       </h1>
       <MiniCreatePost session={session} />
       {/* TODO: show posts in user feed */}
+      <PostFeed initialPosts={subreddit.posts} subredditName={subreddit.name} />
     </>
   );
 };
