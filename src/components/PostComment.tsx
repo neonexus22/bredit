@@ -5,6 +5,7 @@ import { User } from "next-auth";
 import { Comment, CommentVote } from "@prisma/client";
 import UserAvatar from "./UserAvatar";
 import { formatTimeToNow } from "@/lib/utils";
+import CommentVotes from "./CommentVotes";
 
 type ExtendedComment = Comment & {
   votes: CommentVote[];
@@ -13,9 +14,17 @@ type ExtendedComment = Comment & {
 
 interface PostCommentProps {
   comment: ExtendedComment;
+  currentVote: CommentVote | undefined;
+  votesAmt: number;
+  postId: string;
 }
 
-const PostComment: React.FC<PostCommentProps> = ({ comment }) => {
+const PostComment: React.FC<PostCommentProps> = ({
+  comment,
+  currentVote,
+  votesAmt,
+  postId,
+}) => {
   const commentRef = useRef<HTMLDivElement>(null);
 
   return (
@@ -38,6 +47,14 @@ const PostComment: React.FC<PostCommentProps> = ({ comment }) => {
         </div>
       </div>
       <p className="text-sm text-zinc-900 mt-2">{comment.text}</p>
+
+      <div className="flex gap-2 items-center">
+        <CommentVotes
+          commentId={comment.id}
+          initialVotesAmt={votesAmt}
+          initialVote={currentVote}
+        />
+      </div>
     </div>
   );
 };
