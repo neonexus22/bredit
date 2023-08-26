@@ -1,11 +1,21 @@
 "use client";
 
-import React, { useRef } from "react";
-import { User } from "next-auth";
-import { Comment, CommentVote } from "@prisma/client";
-import UserAvatar from "./UserAvatar";
 import { formatTimeToNow } from "@/lib/utils";
+import { Comment, CommentVote } from "@prisma/client";
+import { MessageSquare } from "lucide-react";
+import { User } from "next-auth";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import React, { useRef, useState } from "react";
 import CommentVotes from "./CommentVotes";
+import UserAvatar from "./UserAvatar";
+import { Button } from "./ui/Button";
+import { Label } from "./ui/Label";
+import { Textarea } from "./ui/Textarea";
+import { useMutation } from "@tanstack/react-query";
+import { CommentRequest } from "@/lib/validators/comment";
+import axios from "axios";
+import { toast } from "@/hooks/use-toast";
 
 type ExtendedComment = Comment & {
   votes: CommentVote[];
@@ -25,7 +35,38 @@ const PostComment: React.FC<PostCommentProps> = ({
   votesAmt,
   postId,
 }) => {
+  const router = useRouter();
+  const { data: session } = useSession();
+  const [isReplying, setIsReplying] = useState<boolean>(false);
+  const [input, setInput] = useState<string>("");
+
   const commentRef = useRef<HTMLDivElement>(null);
+
+  const { mutate: postComment, isLoading } = useMutation({
+    mutationFn: async ({ postId, text, replyToId }: CommentRequest) => {
+      const payload: CommentRequest = {
+        postId,
+        text,
+        replyToId,
+      };
+      const { data } = await axios.patch(
+        `/api/subreddit/post/comment`,
+        payload
+      );
+      return data;
+    },
+    onError: () => {
+      return toast({
+        title: "Something went wrong",
+        description: "Comment wasnt posted successfully, try again!",
+        variant: "destructive",
+      });
+    },
+    onSuccess: () => {
+      router.refresh();
+      setIsReplying(false);
+    },
+  });
 
   return (
     <div ref={commentRef} className="flex flex-col">
@@ -46,6 +87,7 @@ const PostComment: React.FC<PostCommentProps> = ({
           </p>
         </div>
       </div>
+
       <p className="text-sm text-zinc-900 mt-2">{comment.text}</p>
 
       <div className="flex gap-2 items-center">
@@ -54,7 +96,60 @@ const PostComment: React.FC<PostCommentProps> = ({
           initialVotesAmt={votesAmt}
           initialVote={currentVote}
         />
+
+        <Button
+          onClick={() => {
+            if (!session) {
+              return router.push("/sign-in");
+            }
+            setIsReplying(true);
+          }}
+          variant="ghost"
+          size="xs"
+          className="focus:ring-0"
+        >
+          <MessageSquare className="h-4 w-4 mr-1.5" />
+          Reply
+        </Button>
       </div>
+      {isReplying ? (
+        <div className="grid w-full gap-1.5 mt-2">
+          <Label htmlFor="comment">Your comment</Label>
+          <div className="mt-2">
+            <Textarea
+              id="comment"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              rows={1}
+              placeholder="Reply to the comment!"
+            />
+
+            <div className="mt-2 flex gap-2 justify-end">
+              <Button
+                variant="subtle"
+                tabIndex={-1}
+                onClick={() => setIsReplying(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                isLoading={isLoading}
+                disabled={input.length === 0 || isLoading}
+                onClick={() => {
+                  if (!input) return;
+                  postComment({
+                    postId,
+                    text: input,
+                    replyToId: comment.replyToId ?? comment.id,
+                  });
+                }}
+              >
+                Post
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };
